@@ -2,6 +2,7 @@ const net    = require( 'net' );
 const debug  = require( 'debug' );
 const varint = require( 'varint' );
 
+const Long  = require( 'long' );
 const State = require( './state.js' );
 
 const config = require( '../config.json' );
@@ -52,6 +53,46 @@ function socketListener( s ) {
          }
 
          return;
+      }
+
+      if( s.info.state === State.STATUS ) {
+         if( id === 0 ) { // Request
+            //TODO: add option to forward packet.
+
+            let status = JSON.stringify( config.status )
+
+            let data = Buffer.concat( [
+               Buffer.from( varint.encode( 0 ) ),
+               Buffer.from( varint.encode( status.length ) ),
+               Buffer.from( status, 'utf8' )
+            ] );
+
+            s.write( Buffer.concat( [
+               Buffer.from( varint.encode( data.length ) ),
+               data
+            ] ) );
+         }
+
+         if( id === 1 ) { // Ping
+            //TODO: calculate forwarded ping?
+
+            let low = packet.readUInt32BE( offset );
+            offset += 4;
+
+            let high = packet.readUInt32BE( offset );
+
+            let payload = new Long( low, high );
+
+            let data = Buffer.alloc( 8 );
+            data.writeUInt32BE( payload.low , 0 );
+            data.writeUInt32BE( payload.high, 0 );
+
+            s.write( Buffer.concat( [
+               Buffer.from( varint.encode( varint.encodingLength( 1 ) + data.length ) ),
+               Buffer.from( varint.encode( 1 ) ),
+               data
+            ] ) );
+         }
       }
    }
 

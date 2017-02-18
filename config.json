@@ -1,3 +1,17 @@
 {
-   "port": 25565
+   "port": 25565,
+   "status": {
+      "version": {
+         "name"    : "mc-proxy",
+         "protocol": 316
+      },
+      "players": {
+         "max"   : -1,
+         "online": 1
+      },
+      "description": {
+         "text" : "mc-proxy",
+         "color": "gold"
+      }
+   }
 }

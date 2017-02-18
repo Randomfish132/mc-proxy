@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "debug": "^2.6.1",
+    "long": "^3.2.0",
     "varint": "^5.0.0"
   }
 }
