@@ -5,6 +5,10 @@ const varint = require( 'varint' );
 const Long  = require( 'long' );
 const State = require( './state.js' );
 
+const Packet      = require( './packets/packet.js' );
+const handshaking = require( './packets/handshaking.js' );
+const status      = require( './packets/status.js' );
+
 const config = require( '../config.json' );
 
 let debugSocket = debug( 'socket' );
@@ -18,81 +22,48 @@ function socketListener( s ) {
    };
 
    function handlePacket( packet ) {
-      let offset = 0;
+      let packetInfo = Packet.decode( packet );
+      let packetData = packetInfo.packet;
 
-      let length = varint.decode( packet );
-      offset += varint.decode.bytes;
+      console.log( packetInfo );
 
-      let id = varint.decode( packet, offset );
-      offset += varint.decode.bytes;
-
-      debugSocket( `recieved new packet #${id} of length ${length} at state: ${State.toString( s.info.state )}` );
+      debugSocket( `recieved new packet #${packetInfo.id} of length ${packetInfo.length} at state: ${State.toString( s.info.state )}` );
 
       if( s.info.state === State.HANDSHAKING ) {
-         if( id === 0 ) { // Handshake
-            let version = varint.decode( packet, offset );
-            offset += varint.decode.bytes;
+         if( packetInfo.id === 0 ) { // Handshake
+            let handshake = handshaking.Handshake.decode( packetData );
 
-            let addressLength = varint.decode( packet, offset );
-            offset += varint.decode.bytes;
+            s.info.version = handshake.version;
+            s.info.address = handshake.address;
+            s.info.port    = handshake.port;
+            s.info.state   = handshake.nextState;
 
-            let address = packet.toString( 'utf8', offset, offset + addressLength );
-            offset += addressLength;
-
-            let port = packet.readUInt16BE( offset );
-            offset += 2;
-
-            let nextState = varint.decode( packet, offset );
-
-            s.info.version = version;
-            s.info.address = address;
-            s.info.port    = port;
-            s.info.state   = nextState;
-
-            debugSocket( 'Handshake:', { version, address, port, nextState } );
+            debugSocket( 'Handshake:', handshake );
          }
 
          return;
       }
 
       if( s.info.state === State.STATUS ) {
-         if( id === 0 ) { // Request
+         if( packetInfo.id === 0 ) { // Request
             //TODO: add option to forward packet.
 
-            let status = JSON.stringify( config.status )
+            let response = new status.Response( config.status );
 
-            let data = Buffer.concat( [
-               Buffer.from( varint.encode( 0 ) ),
-               Buffer.from( varint.encode( status.length ) ),
-               Buffer.from( status, 'utf8' )
-            ] );
-
-            s.write( Buffer.concat( [
-               Buffer.from( varint.encode( data.length ) ),
-               data
-            ] ) );
+            s.write( response.encode() );
          }
 
-         if( id === 1 ) { // Ping
+         if( packetInfo.id === 1 ) { // Ping
             //TODO: calculate forwarded ping?
 
-            let low = packet.readUInt32BE( offset );
-            offset += 4;
+            let ping = status.Ping.decode( packetData );
 
-            let high = packet.readUInt32BE( offset );
+            let pong = new status.Pong( ping.payload );
 
-            let payload = new Long( low, high );
-
-            let data = Buffer.alloc( 8 );
-            data.writeUInt32BE( payload.low , 0 );
-            data.writeUInt32BE( payload.high, 0 );
-
-            s.write( Buffer.concat( [
-               Buffer.from( varint.encode( varint.encodingLength( 1 ) + data.length ) ),
-               Buffer.from( varint.encode( 1 ) ),
-               data
-            ] ) );
+            s.write( pong.encode() );
          }
+
+         return;
       }
    }
 
