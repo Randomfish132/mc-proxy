@@ -1,0 +1,21 @@
+{
+  "name": "mc-proxy",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "repository": {
+    "url": "git@github.com:Randomfish132/mc-proxy.git",
+    "type": "git"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "Randomfish132 <a12345678910ster@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0"
+  },
+  "dependencies": {
+    "debug": "^2.6.1"
+  }
+}
