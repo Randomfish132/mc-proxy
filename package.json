@@ -16,6 +16,7 @@
     "mocha": "^3.2.0"
   },
   "dependencies": {
-    "debug": "^2.6.1"
+    "debug": "^2.6.1",
+    "varint": "^5.0.0"
   }
 }
