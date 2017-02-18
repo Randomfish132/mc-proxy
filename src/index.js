@@ -23,8 +23,36 @@ function socketListener( s ) {
       offset += varint.decode.bytes;
 
       let id = varint.decode( packet, offset );
+      offset += varint.decode.bytes;
 
-      debugSocket( `recieved new packet #${id} of length ${length}` );
+      debugSocket( `recieved new packet #${id} of length ${length} at state: ${State.toString( s.info.state )}` );
+
+      if( s.info.state === State.HANDSHAKING ) {
+         if( id === 0 ) { // Handshake
+            let version = varint.decode( packet, offset );
+            offset += varint.decode.bytes;
+
+            let addressLength = varint.decode( packet, offset );
+            offset += varint.decode.bytes;
+
+            let address = packet.toString( 'utf8', offset, offset + addressLength );
+            offset += addressLength;
+
+            let port = packet.readUInt16BE( offset );
+            offset += 2;
+
+            let nextState = varint.decode( packet, offset );
+
+            s.info.version = version;
+            s.info.address = address;
+            s.info.port    = port;
+            s.info.state   = nextState;
+
+            debugSocket( 'Handshake:', { version, address, port, nextState } );
+         }
+
+         return;
+      }
    }
 
    let chunkBuffer = Buffer.alloc( 0 );
